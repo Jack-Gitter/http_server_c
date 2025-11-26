@@ -1,0 +1,41 @@
+HTTP/HTTPS Server in C — Goal Roadmap
+
+Phase 1 — Foundations (TCP + Basic HTTP) Goal 1 — Create a listening TCP
+socket - Bind to 0.0.0.0:8080 - Accept one client - Print raw request
+bytes
+
+Goal 2 — Send a minimal HTTP response - Parse only enough to respond
+with “Hello World” - Handle GET / HTTP/1.1
+
+Goal 3 — Serve static files - Map / → ./public/index.html - Detect 404 -
+Add Content-Type
+
+Goal 4 — Proper HTTP request parser - Read until  - Parse headers -
+Store into struct
+
+Phase 2 — Concurrency (Multithreading) Goal 5 — Thread-per-connection -
+pthread per client
+
+Goal 6 — Thread Pool - Fixed workers - Job queue - Mutex + cond var
+
+Goal 7 — Graceful shutdown - SIGINT handling - Drain queue
+
+Phase 3 — Modern HTTP Features Goal 8 — POST support - Use
+Content-Length - Return JSON
+
+Goal 9 — Keep-Alive - Support Connection: keep-alive - Reuse sockets
+
+Goal 10 — Router module - Simple route(“/path”, handler)
+
+Phase 4 — HTTPS (SSL/TLS) Goal 11 — Add OpenSSL - SSL_CTX - Load
+cert/key - SSL_read/SSL_write
+
+Goal 12 — Dual HTTP + HTTPS - Ports 8080 + 8443
+
+Goal 13 — TLS config - TLS 1.2+ - Cipher suites
+
+Phase 5 — Performance Mode Goal 14 — Non-blocking sockets Goal 15 —
+Epoll/Kqueue loop Goal 16 — sendfile() for static files
+
+Phase 6 — Extras Goal 17 — Logging Goal 18 — Config file Goal 19 —
+Caching layer Goal 20 — Dynamic content
