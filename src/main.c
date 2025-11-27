@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #define PORT 8080
-#define MAX_LENGTH 1024
+#define MAX_MESSAGE_LENGTH 1024
 
 int main() {
   const int socket_descriptor = socket(PF_INET, SOCK_STREAM, 0);
@@ -48,7 +48,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  char buffer[MAX_LENGTH];
+  char buffer[MAX_MESSAGE_LENGTH];
   recv(accepted_socket_descriptor, &buffer, sizeof(buffer), 0);
 
   printf("buffer contents: %s", buffer);
