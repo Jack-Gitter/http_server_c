@@ -6,7 +6,6 @@
 
 #define PORT 8080
 #define MAX_LENGTH 1024
-#define HEADER_BYTES_LEN 64
 
 int main() {
   const int socket_descriptor = socket(PF_INET, SOCK_STREAM, 0);

@@ -1,0 +1,3 @@
+* figure out how to parse an HTTP request 
+  * get all the headers by reading until the first line break, \r\n and then get content-length header
+  * read the number of bytes remaining in the content-length header after the line break
