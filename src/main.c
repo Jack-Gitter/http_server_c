@@ -4,6 +4,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#define PORT 8080
+#define MAX_LENGTH 1024
+
 int main() {
   const int socket_descriptor = socket(PF_INET, SOCK_STREAM, 0);
 
@@ -15,7 +18,7 @@ int main() {
   struct sockaddr_in address;
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = htonl(INADDR_ANY);
-  address.sin_port = htons(3000);
+  address.sin_port = htons(PORT);
 
   socklen_t socket_address_len = sizeof(address);
 
@@ -45,7 +48,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  char buffer[1024];
+  char buffer[MAX_LENGTH];
   recv(accepted_socket_descriptor, &buffer, sizeof(buffer), 0);
 
   printf("buffer contents: %s", buffer);
