@@ -1,3 +1,5 @@
-* figure out how to parse an HTTP request 
+* modularize the code, make smaller methods to do some work
+* read HTTP data from the socket
+  * make a struct to keep track of data like buffer, amount of data in the buffer, position to write to next, etc
   * get all the headers by reading until the first line break, \r\n and then get content-length header
   * read the number of bytes remaining in the content-length header after the line break
