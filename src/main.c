@@ -76,8 +76,6 @@ int main() {
     message_received = strstr(&message.contents[0], "\r\n\r\n") != NULL;
   }
 
-  printf("buffer contents: %s", message.contents);
-
   char *filename = "./src/html/index.html";
   FILE *fileptr = fopen(filename, "r");
   fseek(fileptr, 0, SEEK_END);
