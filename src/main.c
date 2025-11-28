@@ -78,14 +78,23 @@ int main() {
 
   printf("buffer contents: %s", message.contents);
 
-  char mes[1024] = "HTTP/1.1 200 OK\r\n"
-                   "Content-Length: 11\r\n"
-                   "Content-Type: text/plain\r\n"
-                   "\r\n"
-                   "Hello World";
+  char *filename = "./src/html/index.html";
+  FILE *fileptr = fopen(filename, "r");
+  fseek(fileptr, 0, SEEK_END);
+  long file_bytes = ftell(fileptr);
+  fseek(fileptr, 0, SEEK_SET);
 
-  int bytes_sent = send(accepted_socket_descriptor, &mes, sizeof(mes), 0);
+  char mes[1024];
+  snprintf(mes, sizeof(mes),
+           "HTTP/1.1 200 OK\r\n"
+           "Content-Type: text/html\r\n"
+           "Content-Length: %ld\r\n"
+           "\r\n",
+           file_bytes);
+
+  int bytes_sent = send(accepted_socket_descriptor, mes, sizeof(mes), 0);
   printf("bytes sent: %d\n", bytes_sent);
   close(socket_descriptor);
   close(accepted_socket_descriptor);
+  fclose(fileptr);
 }
