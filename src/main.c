@@ -73,7 +73,7 @@ int main() {
   while (!message_received) {
     int recv_read =
         recv(accepted_socket_descriptor, message.contents + bytes_read,
-             recv_message_capacity - bytes_read, 0);
+             recv_message_capacity - bytes_read - 1, 0);
 
     bytes_read += recv_read;
 
@@ -86,7 +86,9 @@ int main() {
       printf("client closed connection\n");
       exit(0);
     }
-    if (bytes_read != 0 && recv_message_capacity - bytes_read == 0) {
+
+    // space for '\0'
+    if (bytes_read != 0 && recv_message_capacity - bytes_read - 1 == 0) {
 
       recv_message_capacity *= 2;
       recv_message = (char *)realloc(recv_message, recv_message_capacity);
@@ -95,6 +97,8 @@ int main() {
 
     message_received = strstr(message.contents, "\r\n\r\n") != NULL;
   }
+
+  message.contents[recv_message_capacity] = '\0';
 
   char *filename = "./src/html/index.html";
   FILE *fileptr = fopen(filename, "rb");
