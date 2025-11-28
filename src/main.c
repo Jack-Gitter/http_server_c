@@ -77,14 +77,20 @@ int main() {
   }
 
   char *filename = "./src/html/index.html";
-  FILE *fileptr = fopen(filename, "r");
+  FILE *fileptr = fopen(filename, "rb");
   fseek(fileptr, 0, SEEK_END);
   long file_bytes = ftell(fileptr);
   fseek(fileptr, 0, SEEK_SET);
 
-  char file_contents[file_bytes];
+  char *file_contents = malloc(file_bytes + 1);
 
-  fread(file_contents, 1, file_bytes, fileptr);
+  int file_bytes_read = fread(file_contents, 1, file_bytes, fileptr);
+  file_contents[file_bytes] = '\0';
+
+  if (file_bytes_read < file_bytes) {
+    perror("accept failed\n");
+    exit(EXIT_FAILURE);
+  }
 
   char mes[1024];
 
