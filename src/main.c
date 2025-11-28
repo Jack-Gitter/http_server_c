@@ -69,7 +69,6 @@ int main() {
   int bytes_read = 0;
 
   while (!message_received) {
-
     bytes_read +=
         recv(accepted_socket_descriptor, &message.contents + bytes_read,
              sizeof(message.contents) - bytes_read, 0);
@@ -78,6 +77,15 @@ int main() {
   }
 
   printf("buffer contents: %s", message.contents);
+
+  char mes[1024] = "HTTP/1.1 200 OK\r\n"
+                   "Content-Length: 11\r\n"
+                   "Content-Type: text/plain\r\n"
+                   "\r\n"
+                   "Hello World";
+
+  int bytes_sent = send(accepted_socket_descriptor, &mes, sizeof(mes), 0);
+  printf("bytes sent: %d\n", bytes_sent);
   close(socket_descriptor);
   close(accepted_socket_descriptor);
 }
