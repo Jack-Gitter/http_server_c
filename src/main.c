@@ -98,7 +98,7 @@ int main() {
     message_received = strstr(message.contents, "\r\n\r\n") != NULL;
   }
 
-  message.contents[recv_message_capacity] = '\0';
+  message.contents[bytes_read] = '\0';
 
   char *filename = "./src/html/index.html";
   FILE *fileptr = fopen(filename, "rb");
@@ -116,17 +116,16 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  char mes[1024];
+  char headers[512];
+  int header_len = snprintf(headers, sizeof(headers),
+                            "HTTP/1.1 200 OK\r\n"
+                            "Content-Type: text/html\r\n"
+                            "Content-Length: %ld\r\n\r\n",
+                            file_bytes);
 
-  snprintf(mes, sizeof(mes),
-           "HTTP/1.1 200 OK\r\n"
-           "Content-Type: text/html\r\n"
-           "Content-Length: %ld\r\n"
-           "\r\n"
-           "%s",
-           file_bytes, file_contents);
+  send(accepted_socket_descriptor, headers, header_len, 0);
+  send(accepted_socket_descriptor, file_contents, file_bytes, 0);
 
-  int bytes_sent = send(accepted_socket_descriptor, mes, strlen(mes), 0);
   close(socket_descriptor);
   close(accepted_socket_descriptor);
   fclose(fileptr);
