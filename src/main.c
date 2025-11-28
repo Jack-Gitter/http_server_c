@@ -1,11 +1,19 @@
 #include <netinet/in.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #define PORT 8080
 #define MAX_MESSAGE_LENGTH 1024
+
+typedef struct socket_message {
+  char contents[MAX_MESSAGE_LENGTH];
+  int offset;
+  int socket_descriptor;
+} socket_message;
 
 int register_internet_socket(int ip, int port, int max_queue_len) {
 
@@ -55,10 +63,21 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  char buffer[MAX_MESSAGE_LENGTH];
-  recv(accepted_socket_descriptor, &buffer, sizeof(buffer), 0);
+  socket_message message = {"", 0, accepted_socket_descriptor};
 
-  printf("buffer contents: %s", buffer);
+  bool message_received = false;
+  int bytes_read = 0;
+
+  while (!message_received) {
+
+    bytes_read +=
+        recv(accepted_socket_descriptor, &message.contents + bytes_read,
+             sizeof(message.contents) - bytes_read, 0);
+
+    message_received = strstr(&message.contents[0], "\r\n\r\n") != NULL;
+  }
+
+  printf("buffer contents: %s", message.contents);
   close(socket_descriptor);
   close(accepted_socket_descriptor);
 }
