@@ -123,7 +123,6 @@ int main() {
            file_bytes, file_contents);
 
   int bytes_sent = send(accepted_socket_descriptor, mes, strlen(mes), 0);
-  printf("bytes sent: %d\n", bytes_sent);
   close(socket_descriptor);
   close(accepted_socket_descriptor);
   fclose(fileptr);
