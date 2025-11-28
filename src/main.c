@@ -84,13 +84,19 @@ int main() {
   long file_bytes = ftell(fileptr);
   fseek(fileptr, 0, SEEK_SET);
 
+  char file_contents[file_bytes];
+
+  fread(file_contents, 1, file_bytes, fileptr);
+
   char mes[1024];
+
   snprintf(mes, sizeof(mes),
            "HTTP/1.1 200 OK\r\n"
            "Content-Type: text/html\r\n"
            "Content-Length: %ld\r\n"
-           "\r\n",
-           file_bytes);
+           "\r\n"
+           "%s",
+           file_bytes, file_contents);
 
   int bytes_sent = send(accepted_socket_descriptor, mes, sizeof(mes), 0);
   printf("bytes sent: %d\n", bytes_sent);
