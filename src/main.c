@@ -7,7 +7,8 @@
 #define PORT 8080
 #define MAX_MESSAGE_LENGTH 1024
 
-int main() {
+int register_internet_socket(int ip, int port, int max_queue_len) {
+
   const int socket_descriptor = socket(PF_INET, SOCK_STREAM, 0);
 
   if (socket_descriptor < 0) {
@@ -17,8 +18,8 @@ int main() {
 
   struct sockaddr_in address;
   address.sin_family = AF_INET;
-  address.sin_addr.s_addr = htonl(INADDR_ANY);
-  address.sin_port = htons(PORT);
+  address.sin_addr.s_addr = htonl(ip);
+  address.sin_port = htons(port);
 
   socklen_t socket_address_len = sizeof(address);
 
@@ -30,11 +31,17 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  const int listen_result = listen(socket_descriptor, 1);
+  const int listen_result = listen(socket_descriptor, max_queue_len);
   if (listen_result < 0) {
     perror("listen failed\n");
     exit(EXIT_FAILURE);
   }
+  return socket_descriptor;
+}
+
+int main() {
+
+  int socket_descriptor = register_internet_socket(INADDR_ANY, PORT, 1);
 
   struct sockaddr_in client_socket_address = {};
   socklen_t client_socket_address_len = sizeof(client_socket_address);
