@@ -10,7 +10,7 @@
 #define MAX_MESSAGE_LENGTH 1024
 
 typedef struct socket_message {
-  char contents[MAX_MESSAGE_LENGTH];
+  char *contents;
   int offset;
   int socket_descriptor;
 } socket_message;
@@ -63,17 +63,37 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  socket_message message = {"", 0, accepted_socket_descriptor};
+  char *recv_message = (char *)malloc(2048);
+  socket_message message = {recv_message, 0, accepted_socket_descriptor};
 
   bool message_received = false;
   int bytes_read = 0;
+  int recv_message_capacity = 2048;
 
   while (!message_received) {
-    bytes_read +=
-        recv(accepted_socket_descriptor, &message.contents + bytes_read,
-             sizeof(message.contents) - bytes_read, 0);
+    int recv_read =
+        recv(accepted_socket_descriptor, message.contents + bytes_read,
+             recv_message_capacity - bytes_read, 0);
 
-    message_received = strstr(&message.contents[0], "\r\n\r\n") != NULL;
+    bytes_read += recv_read;
+
+    if (recv_read < 0) {
+      perror("recv failed\n");
+      exit(EXIT_FAILURE);
+    }
+
+    if (recv_read == 0) {
+      printf("client closed connection\n");
+      exit(0);
+    }
+    if (bytes_read != 0 && recv_message_capacity - bytes_read == 0) {
+
+      recv_message_capacity *= 2;
+      recv_message = (char *)realloc(recv_message, recv_message_capacity);
+      message.contents = recv_message;
+    }
+
+    message_received = strstr(message.contents, "\r\n\r\n") != NULL;
   }
 
   char *filename = "./src/html/index.html";
@@ -102,7 +122,7 @@ int main() {
            "%s",
            file_bytes, file_contents);
 
-  int bytes_sent = send(accepted_socket_descriptor, mes, sizeof(mes), 0);
+  int bytes_sent = send(accepted_socket_descriptor, mes, strlen(mes), 0);
   printf("bytes sent: %d\n", bytes_sent);
   close(socket_descriptor);
   close(accepted_socket_descriptor);
