@@ -16,6 +16,16 @@ typedef struct socket_message {
   int socket_descriptor;
 } socket_message;
 
+typedef struct http_message {
+  char *headers;
+  int headers_len;
+  char *body;
+  int body_len;
+  char *path;
+  int path_len;
+  char method[6];
+} http_message;
+
 int register_main_socket(int ip, int port, int max_queue_len,
                          int *main_socket) {
 
