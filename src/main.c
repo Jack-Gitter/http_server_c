@@ -220,6 +220,7 @@ int parse_http_request(http_request *http_request, socket_message message) {
   http_request->headers = message.contents;
   http_request->headers_len = message.contents_len;
 
+  char path_base[] = "./dist/html/";
   char *path_start = ptr + 2;
   char *path_end = strchr(path_start, ' ');
 
@@ -229,16 +230,22 @@ int parse_http_request(http_request *http_request, socket_message message) {
   }
 
   int path_len = path_end - path_start;
-  http_request->path = malloc(path_len + 1);
+  int base_len = strlen(path_base);
+  int total_len = path_len + base_len;
+
+  http_request->path = malloc(total_len + 1);
 
   if (http_request->path == NULL) {
     perror("unable to malloc for path\n");
     return -1;
   }
 
-  strncpy(http_request->path, path_start, path_len);
-  http_request->path[path_len] = '\0';
-  http_request->path_len = path_len;
+  strncpy(http_request->path, path_base, base_len);
+  strncpy(http_request->path + base_len, path_start, path_len);
+  http_request->path[total_len] = '\0';
+  http_request->path_len = total_len;
+  printf("path is: \n");
+  printf("%s\n", http_request->path);
   return 0;
 }
 
