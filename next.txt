@@ -1,5 +1,2 @@
-* modularize the code, make smaller methods to do some work
-* read HTTP data from the socket (HTTP GET)
-  * make a struct to keep track of data like buffer, amount of data in the buffer, position to write to next, etc
-  * get all the data by reading until the first line break, \r\n\r\n
-  * after this, then respond with the corresponding data
+* sanitize the input, look for ".." in the path and reject if present
+* put a base route like "./dist/html" on the path so that that is where it looks for html files
