@@ -283,6 +283,7 @@ int main() {
 
   http_request request = {};
   result = parse_http_request(&request, message);
+
   if (result < 0) {
     close(main_socket);
     free(message.contents);
