@@ -145,10 +145,12 @@ int read_file(char *file_path, char **file_contents, long *file_length) {
 
   if (file_bytes_read < *file_length) {
     perror("fread failed\n");
+    free(*file_contents);
     fclose(file_ptr);
     return -1;
   }
 
+  fclose(file_ptr);
   return 0;
 }
 
@@ -222,7 +224,6 @@ int main() {
 
   if (result < 0) {
     free(message.contents);
-    free(file_contents);
     close(message.socket_descriptor);
     close(main_socket);
     exit(EXIT_FAILURE);
