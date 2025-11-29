@@ -11,6 +11,7 @@
 
 typedef struct socket_message {
   char *contents;
+  int contents_len;
   int offset;
   int socket_descriptor;
 } socket_message;
@@ -74,6 +75,7 @@ int get_request_socket(int main_socket_descriptor, socket_message *message) {
 
   (*message).socket_descriptor = accepted_socket_descriptor;
   (*message).contents = client_message;
+  (*message).contents_len = DEFAULT_ALLOCATION_SIZE;
   (*message).offset = 0;
 
   return 0;
@@ -82,12 +84,11 @@ int get_request_socket(int main_socket_descriptor, socket_message *message) {
 int process_http_request(socket_message *message) {
 
   bool client_message_received = false;
-  int client_message_capacity = DEFAULT_ALLOCATION_SIZE;
 
   while (!client_message_received) {
-    int bytes_received = recv(
-        (*message).socket_descriptor, (*message).contents + (*message).offset,
-        client_message_capacity - (*message).offset - 1, 0);
+    int bytes_received = recv((*message).socket_descriptor,
+                              (*message).contents + (*message).offset,
+                              message->contents_len - (*message).offset - 1, 0);
 
     if (bytes_received < 0) {
       perror("recv failed\n");
@@ -101,10 +102,10 @@ int process_http_request(socket_message *message) {
 
     (*message).offset += bytes_received;
 
-    if (client_message_capacity - (*message).offset - 1 == 0) {
-      client_message_capacity *= 2;
+    if (message->contents_len - (*message).offset - 1 == 0) {
+      message->contents_len *= 2;
       char *client_message_realloc =
-          realloc((*message).contents, client_message_capacity);
+          realloc((*message).contents, message->contents_len);
 
       if (client_message_realloc == NULL) {
         printf("failed to realloc recv message buffer\n");
