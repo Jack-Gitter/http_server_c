@@ -265,60 +265,61 @@ int main() {
   }
 
   socket_message message = {};
-  result = get_request_socket(main_socket, &message);
-
-  if (result < 0) {
-    close(main_socket);
-    exit(EXIT_FAILURE);
-  }
-
-  result = get_http_request(&message);
-
-  if (result < 0) {
-    close(main_socket);
-    close(message.socket_descriptor);
-    free(message.contents);
-    exit(EXIT_FAILURE);
-  }
-
   http_request request = {};
-  result = parse_http_request(&request, message);
-
-  if (result < 0) {
-    close(main_socket);
-    free(message.contents);
-    close(message.socket_descriptor);
-    exit(EXIT_FAILURE);
-  }
-
   char *file_contents = NULL;
   long file_length = 0;
+  while (1) {
 
-  printf("%s", request.path);
-  result = read_file(request.path, &file_contents, &file_length);
+    result = get_request_socket(main_socket, &message);
 
-  if (result < 0) {
-    close(main_socket);
-    free(message.contents);
-    close(message.socket_descriptor);
-    free(request.path);
-    exit(EXIT_FAILURE);
+    if (result < 0) {
+      close(main_socket);
+      exit(EXIT_FAILURE);
+    }
+
+    result = get_http_request(&message);
+
+    if (result < 0) {
+      close(main_socket);
+      close(message.socket_descriptor);
+      free(message.contents);
+      exit(EXIT_FAILURE);
+    }
+
+    result = parse_http_request(&request, message);
+
+    if (result < 0) {
+      close(main_socket);
+      free(message.contents);
+      close(message.socket_descriptor);
+      exit(EXIT_FAILURE);
+    }
+
+    printf("%s", request.path);
+    result = read_file(request.path, &file_contents, &file_length);
+
+    if (result < 0) {
+      close(main_socket);
+      free(message.contents);
+      close(message.socket_descriptor);
+      free(request.path);
+      exit(EXIT_FAILURE);
+    }
+
+    result = send_response(message, file_contents, file_length);
+
+    if (result < 0) {
+      close(main_socket);
+      close(message.socket_descriptor);
+      free(message.contents);
+      free(file_contents);
+      free(request.path);
+      exit(EXIT_FAILURE);
+    }
   }
-
-  result = send_response(message, file_contents, file_length);
-
-  if (result < 0) {
-    close(main_socket);
-    close(message.socket_descriptor);
-    free(message.contents);
-    free(file_contents);
-    free(request.path);
-    exit(EXIT_FAILURE);
-  }
-
-  close(main_socket);
   close(message.socket_descriptor);
   free(message.contents);
   free(file_contents);
   free(request.path);
+  close(main_socket);
 }
