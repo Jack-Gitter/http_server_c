@@ -73,10 +73,10 @@ int get_request_socket(int main_socket_descriptor, socket_message *message) {
     return -1;
   }
 
-  (*message).socket_descriptor = accepted_socket_descriptor;
-  (*message).contents = client_message;
-  (*message).contents_len = DEFAULT_ALLOCATION_SIZE;
-  (*message).offset = 0;
+  message->socket_descriptor = accepted_socket_descriptor;
+  message->contents = client_message;
+  message->contents_len = DEFAULT_ALLOCATION_SIZE;
+  message->offset = 0;
 
   return 0;
 }
@@ -86,9 +86,9 @@ int process_http_request(socket_message *message) {
   bool client_message_received = false;
 
   while (!client_message_received) {
-    int bytes_received = recv((*message).socket_descriptor,
-                              (*message).contents + (*message).offset,
-                              message->contents_len - (*message).offset - 1, 0);
+    int bytes_received =
+        recv(message->socket_descriptor, message->contents + message->offset,
+             message->contents_len - message->offset - 1, 0);
 
     if (bytes_received < 0) {
       perror("recv failed\n");
@@ -100,24 +100,24 @@ int process_http_request(socket_message *message) {
       return -1;
     }
 
-    (*message).offset += bytes_received;
+    message->offset += bytes_received;
 
-    if (message->contents_len - (*message).offset - 1 == 0) {
+    if (message->contents_len - message->offset - 1 == 0) {
       message->contents_len *= 2;
       char *client_message_realloc =
-          realloc((*message).contents, message->contents_len);
+          realloc(message->contents, message->contents_len);
 
       if (client_message_realloc == NULL) {
         printf("failed to realloc recv message buffer\n");
         return -1;
       }
-      (*message).contents = client_message_realloc;
+      message->contents = client_message_realloc;
     }
 
-    client_message_received = strstr((*message).contents, "\r\n\r\n") != NULL;
+    client_message_received = strstr(message->contents, "\r\n\r\n") != NULL;
   }
 
-  (*message).contents[(*message).offset] = '\0';
+  message->contents[message->offset] = '\0';
 
   return 0;
 }
