@@ -1,2 +1,1 @@
-* sanitize the input, look for ".." in the path and reject if present
-* put a base route like "./dist/html" on the path so that that is where it looks for html files
+* return 404 if the file is not found
