@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #define PORT 8080
-#define MAX_MESSAGE_LENGTH 1024
 
 typedef struct socket_message {
   char *contents;
