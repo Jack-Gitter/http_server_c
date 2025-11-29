@@ -84,7 +84,7 @@ int get_request_socket(int main_socket_descriptor, socket_message *message) {
   return 0;
 }
 
-int process_http_request(socket_message *message) {
+int get_http_request(socket_message *message) {
 
   bool client_message_received = false;
 
@@ -211,7 +211,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  result = process_http_request(&message);
+  result = get_http_request(&message);
 
   if (result < 0) {
     close(main_socket);
