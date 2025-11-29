@@ -1,2 +1,6 @@
-* make signint handler to clean up on cntrl+c!!!
 * return 404 if the file is not found
+* multithread with pthread
+* non-blocking? epoll?
+
+* optional: 
+	* make signint handler to clean up on ctrl+c?
