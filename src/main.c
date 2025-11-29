@@ -244,8 +244,16 @@ int parse_http_request(http_request *http_request, socket_message message) {
   strncpy(http_request->path + base_len, path_start, path_len);
   http_request->path[total_len] = '\0';
   http_request->path_len = total_len;
-  printf("path is: \n");
+
+  printf("path is:\n");
   printf("%s\n", http_request->path);
+  char *found = strstr(http_request->path, "..");
+  if (found != NULL) {
+    perror("bad path provided by user\n");
+    free(http_request->path);
+    return -1;
+  }
+
   return 0;
 }
 
