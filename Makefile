@@ -1,7 +1,9 @@
+CFLAGS = -g -O0 
+
 all: main
 
 main: src/main.c | dist 
-	clang src/main.c -o dist/main && cp src/html/index.html dist/html/index.html
+	clang $(CFLAGS) src/main.c -o dist/main && cp src/html/index.html dist/html/index.html
 
 dist: 
 	mkdir -p dist && mkdir -p dist/html
