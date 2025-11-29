@@ -38,12 +38,14 @@ int register_main_socket(int ip, int port, int max_queue_len,
 
   if (bind_result < 0) {
     perror("bind failed\n");
+    close(main_socket_descriptor);
     return -1;
   }
 
   const int listen_result = listen(main_socket_descriptor, max_queue_len);
   if (listen_result < 0) {
     perror("listen failed\n");
+    close(main_socket_descriptor);
     return -1;
   }
 
@@ -70,6 +72,7 @@ int get_request_socket(int main_socket_descriptor, socket_message *message) {
 
   if (client_message == NULL) {
     perror("malloc failed\n");
+    close(accepted_socket_descriptor);
     return -1;
   }
 
@@ -211,9 +214,9 @@ int main() {
   result = process_http_request(&message);
 
   if (result < 0) {
-    free(message.contents);
-    close(message.socket_descriptor);
     close(main_socket);
+    close(message.socket_descriptor);
+    free(message.contents);
     exit(EXIT_FAILURE);
   }
 
@@ -224,24 +227,24 @@ int main() {
   result = read_file(file_path, &file_contents, &file_length);
 
   if (result < 0) {
+    close(main_socket);
     free(message.contents);
     close(message.socket_descriptor);
-    close(main_socket);
     exit(EXIT_FAILURE);
   }
 
   result = send_response(message, file_contents, file_length);
 
   if (result < 0) {
+    close(main_socket);
+    close(message.socket_descriptor);
     free(message.contents);
     free(file_contents);
-    close(message.socket_descriptor);
-    close(main_socket);
     exit(EXIT_FAILURE);
   }
 
+  close(main_socket);
+  close(message.socket_descriptor);
   free(message.contents);
   free(file_contents);
-  close(message.socket_descriptor);
-  close(main_socket);
 }
