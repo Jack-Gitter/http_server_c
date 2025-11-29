@@ -14,6 +14,21 @@ typedef struct socket_message {
   int socket_descriptor;
 } socket_message;
 
+void cleanup(socket_message message, FILE *fileptr, char *file_contents,
+             int main_socket_descriptor) {
+  free(message.contents);
+  free(file_contents);
+  if (message.socket_descriptor > 0) {
+    close(message.socket_descriptor);
+  }
+  if (main_socket_descriptor > 0) {
+    close(main_socket_descriptor);
+  }
+  if (fileptr != NULL) {
+    fclose(fileptr);
+  }
+}
+
 int register_internet_socket(int ip, int port, int max_queue_len) {
 
   const int socket_descriptor = socket(PF_INET, SOCK_STREAM, 0);
@@ -80,17 +95,13 @@ int main() {
              client_message_capacity - message.offset - 1, 0);
 
     if (bytes_received < 0) {
-      free(message.contents);
-      close(message.socket_descriptor);
-      close(main_socket_descriptor);
+      cleanup(message, NULL, NULL, main_socket_descriptor);
       perror("recv failed\n");
       exit(EXIT_FAILURE);
     }
 
     if (bytes_received == 0) {
-      free(message.contents);
-      close(message.socket_descriptor);
-      close(main_socket_descriptor);
+      cleanup(message, NULL, NULL, main_socket_descriptor);
       printf("client closed connection\n");
       exit(0);
     }
@@ -103,9 +114,7 @@ int main() {
           realloc(message.contents, client_message_capacity);
 
       if (client_message_realloc == NULL) {
-        free(message.contents);
-        close(message.socket_descriptor);
-        close(main_socket_descriptor);
+        cleanup(message, NULL, NULL, main_socket_descriptor);
         printf("failed to realloc recv message buffer\n");
         exit(EXIT_FAILURE);
       }
@@ -120,9 +129,7 @@ int main() {
   char *filename = "./src/html/index.html";
   FILE *fileptr = fopen(filename, "rb");
   if (fileptr == NULL) {
-    free(message.contents);
-    close(message.socket_descriptor);
-    close(main_socket_descriptor);
+    cleanup(message, NULL, NULL, main_socket_descriptor);
     printf("failed to open file\n");
     exit(EXIT_FAILURE);
   }
@@ -134,10 +141,7 @@ int main() {
   char *file_contents = malloc(file_len);
 
   if (file_contents == NULL) {
-    free(message.contents);
-    close(message.socket_descriptor);
-    close(main_socket_descriptor);
-    fclose(fileptr);
+    cleanup(message, fileptr, NULL, main_socket_descriptor);
     printf("failed to allocate memory for file contents\n");
     exit(EXIT_FAILURE);
   }
@@ -145,11 +149,7 @@ int main() {
   int file_bytes_read = fread(file_contents, 1, file_len, fileptr);
 
   if (file_bytes_read < file_len) {
-    free(message.contents);
-    free(file_contents);
-    close(message.socket_descriptor);
-    close(main_socket_descriptor);
-    fclose(fileptr);
+    cleanup(message, fileptr, file_contents, main_socket_descriptor);
     perror("fread failed\n");
     exit(EXIT_FAILURE);
   }
@@ -167,11 +167,7 @@ int main() {
     int sent = send(message.socket_descriptor, headers + total_bytes_sent,
                     header_len - total_bytes_sent, 0);
     if (sent < 0) {
-      free(message.contents);
-      free(file_contents);
-      close(message.socket_descriptor);
-      close(main_socket_descriptor);
-      fclose(fileptr);
+      cleanup(message, fileptr, file_contents, main_socket_descriptor);
       perror("send failed\n");
       exit(EXIT_FAILURE);
     }
@@ -184,20 +180,12 @@ int main() {
     int sent = send(message.socket_descriptor, file_contents + total_bytes_sent,
                     file_len - total_bytes_sent, 0);
     if (sent < 0) {
-      free(message.contents);
-      free(file_contents);
-      close(message.socket_descriptor);
-      close(main_socket_descriptor);
-      fclose(fileptr);
+      cleanup(message, fileptr, file_contents, main_socket_descriptor);
       perror("send failed\n");
       exit(EXIT_FAILURE);
     }
     total_bytes_sent += sent;
   }
 
-  free(message.contents);
-  free(file_contents);
-  close(message.socket_descriptor);
-  close(main_socket_descriptor);
-  fclose(fileptr);
+  cleanup(message, fileptr, file_contents, main_socket_descriptor);
 }
