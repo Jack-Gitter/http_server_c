@@ -49,13 +49,13 @@ int register_internet_socket(int ip, int port, int max_queue_len) {
 
 int main() {
 
-  int socket_descriptor = register_internet_socket(INADDR_ANY, PORT, 1);
+  int main_socket_descriptor = register_internet_socket(INADDR_ANY, PORT, 1);
 
   struct sockaddr_in client_socket_address = {};
   socklen_t client_socket_address_len = sizeof(client_socket_address);
 
   const int accepted_socket_descriptor =
-      accept(socket_descriptor, (struct sockaddr *)&client_socket_address,
+      accept(main_socket_descriptor, (struct sockaddr *)&client_socket_address,
              &client_socket_address_len);
 
   if (accepted_socket_descriptor < 0) {
@@ -63,56 +63,95 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  char *recv_message = (char *)malloc(2048);
-  socket_message message = {recv_message, 0, accepted_socket_descriptor};
+  char *client_message = (char *)malloc(2048);
 
-  bool message_received = false;
-  int bytes_read = 0;
-  int recv_message_capacity = 2048;
+  if (client_message == NULL) {
+    perror("malloc failed\n");
+    exit(EXIT_FAILURE);
+  }
 
-  while (!message_received) {
-    int recv_read =
-        recv(accepted_socket_descriptor, message.contents + bytes_read,
-             recv_message_capacity - bytes_read - 1, 0);
+  socket_message message = {client_message, 0, accepted_socket_descriptor};
 
-    bytes_read += recv_read;
+  bool client_message_received = false;
+  int client_message_capacity = 2048;
 
-    if (recv_read < 0) {
+  while (!client_message_received) {
+    int bytes_received =
+        recv(message.socket_descriptor, message.contents + message.offset,
+             client_message_capacity - message.offset - 1, 0);
+
+    if (bytes_received < 0) {
+      free(message.contents);
+      close(message.socket_descriptor);
+      close(main_socket_descriptor);
       perror("recv failed\n");
       exit(EXIT_FAILURE);
     }
 
-    if (recv_read == 0) {
+    if (bytes_received == 0) {
+      free(message.contents);
+      close(message.socket_descriptor);
+      close(main_socket_descriptor);
       printf("client closed connection\n");
       exit(0);
     }
 
-    // space for '\0'
-    if (bytes_read != 0 && recv_message_capacity - bytes_read - 1 == 0) {
+    message.offset += bytes_received;
 
-      recv_message_capacity *= 2;
-      recv_message = (char *)realloc(recv_message, recv_message_capacity);
-      message.contents = recv_message;
+    if (client_message_capacity - message.offset - 1 == 0) {
+      client_message_capacity *= 2;
+      char *client_message_realloc =
+          realloc(message.contents, client_message_capacity);
+
+      if (client_message_realloc == NULL) {
+        free(message.contents);
+        close(message.socket_descriptor);
+        close(main_socket_descriptor);
+        printf("failed to realloc recv message buffer\n");
+        exit(EXIT_FAILURE);
+      }
+      message.contents = client_message_realloc;
     }
 
-    message_received = strstr(message.contents, "\r\n\r\n") != NULL;
+    client_message_received = strstr(message.contents, "\r\n\r\n") != NULL;
   }
 
-  message.contents[bytes_read] = '\0';
+  message.contents[message.offset] = '\0';
 
   char *filename = "./src/html/index.html";
   FILE *fileptr = fopen(filename, "rb");
+  if (fileptr == NULL) {
+    free(message.contents);
+    close(message.socket_descriptor);
+    close(main_socket_descriptor);
+    printf("failed to open file\n");
+    exit(EXIT_FAILURE);
+  }
+
   fseek(fileptr, 0, SEEK_END);
-  long file_bytes = ftell(fileptr);
+  long file_len = ftell(fileptr);
   fseek(fileptr, 0, SEEK_SET);
 
-  char *file_contents = malloc(file_bytes + 1);
+  char *file_contents = malloc(file_len);
 
-  int file_bytes_read = fread(file_contents, 1, file_bytes, fileptr);
-  file_contents[file_bytes] = '\0';
+  if (file_contents == NULL) {
+    free(message.contents);
+    close(message.socket_descriptor);
+    close(main_socket_descriptor);
+    fclose(fileptr);
+    printf("failed to allocate memory for file contents\n");
+    exit(EXIT_FAILURE);
+  }
 
-  if (file_bytes_read < file_bytes) {
-    perror("accept failed\n");
+  int file_bytes_read = fread(file_contents, 1, file_len, fileptr);
+
+  if (file_bytes_read < file_len) {
+    free(message.contents);
+    free(file_contents);
+    close(message.socket_descriptor);
+    close(main_socket_descriptor);
+    fclose(fileptr);
+    perror("fread failed\n");
     exit(EXIT_FAILURE);
   }
 
@@ -121,12 +160,45 @@ int main() {
                             "HTTP/1.1 200 OK\r\n"
                             "Content-Type: text/html\r\n"
                             "Content-Length: %ld\r\n\r\n",
-                            file_bytes);
+                            file_len);
 
-  send(accepted_socket_descriptor, headers, header_len, 0);
-  send(accepted_socket_descriptor, file_contents, file_bytes, 0);
+  int total_bytes_sent = 0;
 
-  close(socket_descriptor);
-  close(accepted_socket_descriptor);
+  while (total_bytes_sent < header_len) {
+    int sent = send(message.socket_descriptor, headers + total_bytes_sent,
+                    header_len - total_bytes_sent, 0);
+    if (sent < 0) {
+      free(message.contents);
+      free(file_contents);
+      close(message.socket_descriptor);
+      close(main_socket_descriptor);
+      fclose(fileptr);
+      perror("send failed\n");
+      exit(EXIT_FAILURE);
+    }
+    total_bytes_sent += sent;
+  }
+
+  total_bytes_sent = 0;
+
+  while (total_bytes_sent < file_len) {
+    int sent = send(message.socket_descriptor, file_contents + total_bytes_sent,
+                    file_len - total_bytes_sent, 0);
+    if (sent < 0) {
+      free(message.contents);
+      free(file_contents);
+      close(message.socket_descriptor);
+      close(main_socket_descriptor);
+      fclose(fileptr);
+      perror("send failed\n");
+      exit(EXIT_FAILURE);
+    }
+    total_bytes_sent += sent;
+  }
+
+  free(message.contents);
+  free(file_contents);
+  close(message.socket_descriptor);
+  close(main_socket_descriptor);
   fclose(fileptr);
 }
