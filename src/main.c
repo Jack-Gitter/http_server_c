@@ -16,7 +16,7 @@ typedef struct socket_message {
   int socket_descriptor;
 } socket_message;
 
-typedef struct http_message {
+typedef struct http_request {
   char *headers;
   int headers_len;
   char *body;
@@ -24,7 +24,7 @@ typedef struct http_message {
   char *path;
   int path_len;
   char method[6];
-} http_message;
+} http_request;
 
 int register_main_socket(int ip, int port, int max_queue_len,
                          int *main_socket) {
@@ -204,6 +204,44 @@ int send_response(socket_message message, char *response,
   return 0;
 }
 
+int parse_http_request(http_request *http_request, socket_message message) {
+  http_request->body = NULL;
+  http_request->body_len = 0;
+
+  char *ptr = strchr(message.contents, ' ');
+  if (ptr == NULL) {
+    perror("unable to parse http method\n");
+    return -1;
+  }
+
+  int method_len = ptr - message.contents;
+  strncpy(http_request->method, message.contents, method_len);
+  http_request->method[method_len] = '\0';
+  http_request->headers = message.contents;
+  http_request->headers_len = message.contents_len;
+
+  char *path_start = ptr + 2;
+  char *path_end = strchr(path_start, ' ');
+
+  if (path_end == NULL) {
+    perror("unable to parse http path\n");
+    return -1;
+  }
+
+  int path_len = path_end - path_start;
+  http_request->path = malloc(path_len + 1);
+
+  if (http_request->path == NULL) {
+    perror("unable to malloc for path\n");
+    return -1;
+  }
+
+  strncpy(http_request->path, path_start, path_len);
+  http_request->path[path_len] = '\0';
+  http_request->path_len = path_len;
+  return 0;
+}
+
 int main() {
 
   int main_socket;
@@ -230,16 +268,26 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  char *file_path = "./src/html/index.html";
+  http_request request = {};
+  result = parse_http_request(&request, message);
+  if (result < 0) {
+    close(main_socket);
+    free(message.contents);
+    close(message.socket_descriptor);
+    exit(EXIT_FAILURE);
+  }
+
   char *file_contents = NULL;
   long file_length = 0;
 
-  result = read_file(file_path, &file_contents, &file_length);
+  printf("%s", request.path);
+  result = read_file(request.path, &file_contents, &file_length);
 
   if (result < 0) {
     close(main_socket);
     free(message.contents);
     close(message.socket_descriptor);
+    free(request.path);
     exit(EXIT_FAILURE);
   }
 
@@ -250,6 +298,7 @@ int main() {
     close(message.socket_descriptor);
     free(message.contents);
     free(file_contents);
+    free(request.path);
     exit(EXIT_FAILURE);
   }
 
@@ -257,4 +306,5 @@ int main() {
   close(message.socket_descriptor);
   free(message.contents);
   free(file_contents);
+  free(request.path);
 }
