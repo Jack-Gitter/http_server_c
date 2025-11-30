@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -138,9 +139,17 @@ int get_http_request(socket_message *message) {
 int read_file(char *file_path, char **file_contents, long *file_length) {
 
   FILE *file_ptr = fopen(file_path, "rb");
-  if (file_ptr == NULL) {
+  if (file_ptr == NULL && errno != ENOENT) {
     printf("failed to open file\n");
-    return -1;
+  }
+  if (file_ptr == NULL && errno == ENOENT) {
+    errno = 404;
+    char not_found_path[] = "./dist/html/not-found.html";
+    file_ptr = fopen(not_found_path, "rb");
+    if (file_ptr == NULL) {
+      printf("failed to open 404 html\n");
+      return -1;
+    }
   }
 
   fseek(file_ptr, 0, SEEK_END);
@@ -168,15 +177,19 @@ int read_file(char *file_path, char **file_contents, long *file_length) {
   return 0;
 }
 
-int send_response(socket_message message, char *response,
-                  long response_length) {
+int send_response(socket_message message, char *response, long response_length,
+                  bool found) {
 
   char headers[512];
+  int status_code = 200;
+  if (!found) {
+    status_code = 404;
+  }
   int header_len = snprintf(headers, sizeof(headers),
-                            "HTTP/1.1 200 OK\r\n"
+                            "HTTP/1.1 %d OK\r\n"
                             "Content-Type: text/html\r\n"
                             "Content-Length: %ld\r\n\r\n",
-                            response_length);
+                            status_code, response_length);
 
   int total_bytes_sent = 0;
 
@@ -292,7 +305,12 @@ int handle_incomming_request(socket_message message, int main_socket) {
     return -1;
   }
 
-  result = send_response(message, file_contents, file_length);
+  bool found_file = true;
+  if (errno == 404) {
+    found_file = false;
+  }
+
+  result = send_response(message, file_contents, file_length, found_file);
 
   if (result < 0) {
     close(message.socket_descriptor);
@@ -301,6 +319,12 @@ int handle_incomming_request(socket_message message, int main_socket) {
     free(request.path);
     return -1;
   }
+
+  close(message.socket_descriptor);
+  free(message.contents);
+  free(file_contents);
+  free(request.path);
+
   return 0;
 }
 
