@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -255,15 +256,21 @@ int parse_http_request(http_request *http_request, socket_message message) {
   return 0;
 }
 
-int handle_incomming_request(int main_socket, int accepted_socket_descriptor) {
+typedef struct descriptors {
+  int sd;
+} descriptors;
 
+void *handle_incomming_request(void *descriptor) {
+
+  descriptors *d = (descriptors *)descriptor;
+  int accepted_socket_descriptor = d->sd;
   socket_message message = {};
   message.socket_descriptor = accepted_socket_descriptor;
   message.contents = malloc(DEFAULT_ALLOCATION_SIZE);
 
   if (message.contents == NULL) {
     perror("malloc failed\n");
-    return -1;
+    return NULL;
   }
 
   message.contents_len = DEFAULT_ALLOCATION_SIZE;
@@ -278,7 +285,7 @@ int handle_incomming_request(int main_socket, int accepted_socket_descriptor) {
   if (result < 0) {
     close(message.socket_descriptor);
     free(message.contents);
-    return -1;
+    return NULL;
   }
 
   result = parse_http_request(&request, message);
@@ -286,7 +293,7 @@ int handle_incomming_request(int main_socket, int accepted_socket_descriptor) {
   if (result < 0) {
     free(message.contents);
     close(message.socket_descriptor);
-    return -1;
+    return NULL;
   }
 
   printf("%s", request.path);
@@ -296,7 +303,7 @@ int handle_incomming_request(int main_socket, int accepted_socket_descriptor) {
     free(message.contents);
     close(message.socket_descriptor);
     free(request.path);
-    return -1;
+    return NULL;
   }
 
   bool found_file = true;
@@ -311,7 +318,7 @@ int handle_incomming_request(int main_socket, int accepted_socket_descriptor) {
     free(message.contents);
     free(file_contents);
     free(request.path);
-    return -1;
+    return NULL;
   }
 
   close(message.socket_descriptor);
@@ -337,8 +344,14 @@ int main() {
     if (sd < 0) {
       break;
     }
-    int result = handle_incomming_request(main_socket, sd);
-    if (result < 0) {
+    pthread_t info;
+    descriptors d = {};
+    d.sd = sd;
+
+    int thread_res =
+        pthread_create(&info, NULL, handle_incomming_request, (void *)&d);
+
+    if (thread_res < 0) {
       break;
     }
   }
