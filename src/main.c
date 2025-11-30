@@ -65,7 +65,7 @@ int register_main_socket(int ip, int port, int max_queue_len,
   return 0;
 }
 
-int get_request_socket(int main_socket_descriptor, socket_message *message) {
+int get_request_socket(int main_socket_descriptor) {
 
   struct sockaddr_in client_socket_address = {};
   socklen_t client_socket_address_len = sizeof(client_socket_address);
@@ -79,20 +79,7 @@ int get_request_socket(int main_socket_descriptor, socket_message *message) {
     return -1;
   }
 
-  char *client_message = (char *)malloc(DEFAULT_ALLOCATION_SIZE);
-
-  if (client_message == NULL) {
-    perror("malloc failed\n");
-    close(accepted_socket_descriptor);
-    return -1;
-  }
-
-  message->socket_descriptor = accepted_socket_descriptor;
-  message->contents = client_message;
-  message->contents_len = DEFAULT_ALLOCATION_SIZE;
-  message->offset = 0;
-
-  return 0;
+  return accepted_socket_descriptor;
 }
 
 int get_http_request(socket_message *message) {
@@ -268,18 +255,25 @@ int parse_http_request(http_request *http_request, socket_message message) {
   return 0;
 }
 
-int handle_incomming_request(socket_message message, int main_socket) {
+int handle_incomming_request(int main_socket, int accepted_socket_descriptor) {
+
+  socket_message message = {};
+  message.socket_descriptor = accepted_socket_descriptor;
+  message.contents = malloc(DEFAULT_ALLOCATION_SIZE);
+
+  if (message.contents == NULL) {
+    perror("malloc failed\n");
+    return -1;
+  }
+
+  message.contents_len = DEFAULT_ALLOCATION_SIZE;
+  message.offset = 0;
 
   http_request request = {};
   char *file_contents = NULL;
   long file_length = 0;
 
-  int result = get_request_socket(main_socket, &message);
-  if (result < 0) {
-    return -1;
-  }
-
-  result = get_http_request(&message);
+  int result = get_http_request(&message);
 
   if (result < 0) {
     close(message.socket_descriptor);
@@ -337,13 +331,16 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  socket_message message = {};
   while (1) {
-    int result = handle_incomming_request(message, main_socket);
+
+    int sd = get_request_socket(main_socket);
+    if (sd < 0) {
+      break;
+    }
+    int result = handle_incomming_request(main_socket, sd);
     if (result < 0) {
       break;
     }
   }
-
   close(main_socket);
 }
